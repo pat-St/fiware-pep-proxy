@@ -41,7 +41,7 @@ config.pep = {
 };
 
 // in seconds
-config.cache_time = 300;
+config.cache_time = 10;
 
 // if enabled PEP checks permissions in two ways:
 //  - With IdM: only allow basic authorization
@@ -59,7 +59,7 @@ config.authorization = {
     protocol: 'http',
     host: 'localhost',
     port: 8080,
-    path: '' 
+    path: ''
   },
   azf: {
     custom_policy: undefined, // use undefined to default policy checks (HTTP verb + path).
@@ -84,7 +84,7 @@ config.cluster = {
 config.public_paths = [];
 
 config.magic_key = undefined;
-config.auth_for_nginx =  false;
+config.auth_for_nginx = false;
 
 config.error_template = `{
     "type": "{{type}}",

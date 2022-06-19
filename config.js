@@ -41,7 +41,7 @@ config.pep = {
 };
 
 // in seconds
-config.cache_time = 300;
+config.cache_time = 5;
 
 // if enabled PEP checks permissions in two ways:
 //  - With IdM: only allow basic authorization

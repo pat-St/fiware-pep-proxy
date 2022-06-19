@@ -3,6 +3,7 @@ const cors = require('cors');
 const config_service = require('./lib/config_service');
 
 const fs = require('fs');
+const fsP = require("fs/promises");
 const https = require('https');
 const errorhandler = require('errorhandler');
 
@@ -10,10 +11,78 @@ const logger = require('morgan');
 const debug = require('debug')('pep-proxy:app');
 const express = require('express');
 
+
+const path = require('path');
+const got = require('got');
+
 process.on('uncaughtException', function (err) {
   debug('Caught exception: ' + err);
 });
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
+const { Writable } = require('stream');
+
+class WriteStream extends Writable {
+  constructor(filename) {
+    super();
+    this.filename = filename;
+    this.fd = null;
+    this.construct(this.doNothing)
+  }
+
+  doNothing(s = null) {
+    if (s) { console.log(s) }
+  }
+  construct(callback) {
+    fsP.open(this.filename, "w").then((of) => {
+      this.fd = of
+    }).finally(() => {
+      callback();
+    })
+  }
+
+  write(chunk) {
+    const cb = function (a = null, b = null, c = null) {
+      if (a) { console.log(a + b + c) }
+    }
+    console.log(JSON.parse(Buffer.from(chunk).toString("utf-8")))
+    try {
+      let loggingProcess = Promise.resolve(true);
+      if (process.env.PEP_LOGGING_REMOTE.toLowerCase() === "true") {
+        loggingProcess = got.post(process.env.PEP_LOGGING_TARGET, {
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: Buffer.from(chunk).toString("utf-8")
+        })
+      }
+      loggingProcess.then(() => this.fd.write(chunk));
+    } catch (error) {
+      console.log("failed send data to usage control")
+    } finally {
+      cb();
+    }
+    // got.post(process.env.PEP_LOGGING_TARGET, {
+    //   headers: {
+    //     "Content-Type": "application/json"
+    //   },
+    //   body: Buffer.from(chunk).toString("utf-8")
+    // }).then(() => this.fd.write(chunk))
+    // .catch((err) =>console.log(err))
+    // .finally(() => cb())
+  }
+
+  destroy(err, callback) {
+    if (this.fd) {
+      fs.close(this.fd, (er) => callback(er || err));
+    } else {
+      callback(err);
+    }
+  }
+}
+
+const lopperTarget = new WriteStream(path.join(__dirname, 'access.log'));
+
 
 /**
  * Start the express server to listen to all requests. Whitelisted public paths are
@@ -39,6 +108,23 @@ exports.start_server = function (token, config) {
   if (config.debug) {
     app.use(logger('dev'));
   }
+
+  app.use(logger(function (tokens, req, res) {
+    const payload = {
+      action: tokens.method(req, res),
+      url: tokens.url(req, res),
+      status: parseInt(tokens.status(req, res)),
+      token: tokens.req(req, res, "X-Auth-Token"),
+      agent: tokens['user-agent'](req),
+      sourceAddr: tokens['remote-addr'](req),
+      remoteUser: tokens.req(req, res, "X-User") || ("charlie" || tokens['remote-user'](req)),
+      targetAddr: tokens.req(req, res, "fiware-service") || config.app.host + ":" + config.app.port,
+      contentLength: tokens.res(req, res, 'content-length'),
+      timestamp: tokens.date(req, res, "iso"),
+      responseTime: tokens['response-time'](req, res),
+    }
+    return JSON.stringify(payload);
+  }, { stream: lopperTarget }));
 
   app.use(function (req, res, next) {
     const bodyChunks = [];
@@ -70,10 +156,10 @@ exports.start_server = function (token, config) {
   // are set in the config.
   debug(
     'Starting PEP proxy on port ' +
-      port +
-      (config.authorization.enabled
-        ? '. PDP authorization via ' + config.authorization.pdp
-        : '. User authentication via IDM')
+    port +
+    (config.authorization.enabled
+      ? '. PDP authorization via ' + config.authorization.pdp
+      : '. User authentication via IDM')
   );
 
   for (const p in config.public_paths) {

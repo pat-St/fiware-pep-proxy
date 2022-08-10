@@ -3,7 +3,7 @@ const cors = require('cors');
 const config_service = require('./lib/config_service');
 
 const fs = require('fs');
-const fsP = require("fs/promises");
+// const fsP = require("fs/promises");
 const https = require('https');
 const errorhandler = require('errorhandler');
 
@@ -31,21 +31,21 @@ class WriteStream extends Writable {
   }
 
   doNothing(s = null) {
-    if (s) { console.log(s) }
+    if (s) { console.debug(s) }
   }
   construct(callback) {
-    fsP.open(this.filename, "w").then((of) => {
-      this.fd = of
-    }).finally(() => {
-      callback();
-    })
+    // fsP.open(this.filename, "w").then((of) => {
+    // this.fd = of
+    // }).finally(() => {
+    callback();
+    // })
   }
 
   write(chunk) {
     const cb = function (a = null, b = null, c = null) {
-      if (a) { console.log(a + b + c) }
+      if (a) { console.debug(a + b + c) }
     }
-    console.log(JSON.parse(Buffer.from(chunk).toString("utf-8")))
+    console.debug(JSON.parse(Buffer.from(chunk).toString("utf-8")))
     try {
       let loggingProcess = Promise.resolve(true);
       if (process.env.PEP_LOGGING_REMOTE.toLowerCase() === "true") {
@@ -56,7 +56,12 @@ class WriteStream extends Writable {
           body: Buffer.from(chunk).toString("utf-8")
         })
       }
-      loggingProcess.then(() => this.fd.write(chunk));
+      loggingProcess.then(() => {
+        // this.fd.write(chunk)
+        this.fd = fs.openSync(this.filename, "a");
+        fs.appendFileSync(this.fd, chunk);
+        fs.closeSync(this.fd);
+      });
     } catch (error) {
       console.log("failed send data to usage control")
     } finally {
@@ -81,7 +86,7 @@ class WriteStream extends Writable {
   }
 }
 
-const lopperTarget = new WriteStream(path.join(__dirname, 'access.log'));
+const lopperTarget = new WriteStream(path.join(__dirname, `access.log`));
 
 
 /**
@@ -117,7 +122,7 @@ exports.start_server = function (token, config) {
       token: tokens.req(req, res, "X-Auth-Token"),
       agent: tokens['user-agent'](req),
       sourceAddr: tokens['remote-addr'](req),
-      remoteUser: tokens.req(req, res, "X-User") || ("charlie" || tokens['remote-user'](req)),
+      remoteUser: tokens.req(req, res, "X-User") || tokens['remote-user'](req),
       targetAddr: tokens.req(req, res, "fiware-service") || config.app.host + ":" + config.app.port,
       contentLength: tokens.res(req, res, 'content-length'),
       timestamp: tokens.date(req, res, "iso"),

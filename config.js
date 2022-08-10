@@ -41,7 +41,7 @@ config.pep = {
 };
 
 // in seconds
-config.cache_time = 5;
+config.cache_time = 0.1;
 
 // if enabled PEP checks permissions in two ways:
 //  - With IdM: only allow basic authorization
@@ -75,7 +75,7 @@ config.cors = {
 };
 
 config.cluster = {
-  type: 'manual', // manual|allCPUCores
+  type: 'allCPUCores', // manual|allCPUCores
   number: 1
 };
 

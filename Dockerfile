@@ -1,4 +1,4 @@
-ARG NODE_VERSION=14
+ARG NODE_VERSION=16
 ARG GITHUB_ACCOUNT=ging
 ARG GITHUB_REPOSITORY=fiware-pep-proxy
 ARG DOWNLOAD=latest
@@ -43,20 +43,20 @@ USER root
 
 # hadolint ignore=SC2039
 RUN \
-	if [ "${PACKAGE_MANAGER}" = "apt"  ]; then \
-	echo -e "\033[0;34mINFO: Using default \"${PACKAGE_MANAGER}\".\033[0m"; \
-	apt-get install -y --no-install-recommends unzip; \
-	elif [ "${PACKAGE_MANAGER}" = "yum"  ]; then \
-	echo -e "\033[0;33mWARNING: Overriding default package manager. Using \"${PACKAGE_MANAGER}\" .\033[0m"; \
-	yum install -y unzip; \
-	yum clean all; \
-	elif [ "${PACKAGE_MANAGER}" = "apk"  ]; then \
-	echo -e "\033[0;33mWARNING: Overriding default package manager. Using \"${PACKAGE_MANAGER}\" .\033[0m"; \
-	apk --no-cache --update-cache add gcc python3 python3-dev py-pip build-base wget curl; \
-	else \
-	echo -e "\033[0;31mERROR: Package Manager \"${PACKAGE_MANAGER}\" not supported.\033[0m"; \
-	exit 1; \
-	fi
+  if [ "${PACKAGE_MANAGER}" = "apt"  ]; then \
+  echo -e "\033[0;34mINFO: Using default \"${PACKAGE_MANAGER}\".\033[0m"; \
+  apt-get install -y --no-install-recommends unzip; \
+  elif [ "${PACKAGE_MANAGER}" = "yum"  ]; then \
+  echo -e "\033[0;33mWARNING: Overriding default package manager. Using \"${PACKAGE_MANAGER}\" .\033[0m"; \
+  yum install -y unzip; \
+  yum clean all; \
+  elif [ "${PACKAGE_MANAGER}" = "apk"  ]; then \
+  echo -e "\033[0;33mWARNING: Overriding default package manager. Using \"${PACKAGE_MANAGER}\" .\033[0m"; \
+  apk --no-cache --update-cache add gcc python3 python3-dev py-pip build-base wget curl; \
+  else \
+  echo -e "\033[0;31mERROR: Package Manager \"${PACKAGE_MANAGER}\" not supported.\033[0m"; \
+  exit 1; \
+  fi
 
 # As an Alternative for local development, just copy this Dockerfile into file the root of 
 # the repository and replace the whole RUN statement below by the following COPY statement 
@@ -87,8 +87,8 @@ WORKDIR /opt/fiware-pep-proxy
 
 # hadolint ignore=DL3008
 RUN \
-	echo "INFO: npm install --production..." && \
-	npm install --only=prod --no-package-lock --no-optional --unsafe-perm
+  echo "INFO: npm install --production..." && \
+  npm install --only=prod --no-package-lock --no-optional --unsafe-perm
 
 ########################################################################################
 #
@@ -100,7 +100,7 @@ FROM ${BUILDER} AS anon-user
 # hadolint ignore=DL3002
 USER root
 RUN sed -i -r "/^(root|nobody)/!d" /etc/passwd /etc/shadow /etc/group \
-	&& sed -i -r 's#^(.*):[^:]*$#\1:/sbin/nologin#' /etc/passwd
+  && sed -i -r 's#^(.*):[^:]*$#\1:/sbin/nologin#' /etc/passwd
 
 ########################################################################################
 #
@@ -145,7 +145,7 @@ ENV NODE_ENV=production
 EXPOSE ${PEP_PROXY_PORT:-1027}
 CMD ["./bin/www"]
 HEALTHCHECK  --interval=30s --timeout=3s --start-period=60s \
-	CMD ["/nodejs/bin/node", "./bin/healthcheck"]
+  CMD ["/nodejs/bin/node", "./bin/healthcheck"]
 
 
 ########################################################################################
@@ -194,7 +194,7 @@ ENV NODE_ENV=production
 EXPOSE ${PEP_PROXY_PORT:-1027}
 CMD ["npm", "start"]
 HEALTHCHECK  --interval=30s --timeout=3s --start-period=60s \
-	CMD ["npm", "run", "healthcheck"]
+  CMD ["npm", "run", "healthcheck"]
 
 # 
 # ALL ENVIRONMENT VARIABLES

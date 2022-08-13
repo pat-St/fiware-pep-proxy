@@ -5,6 +5,7 @@ const config_service = require('./lib/config_service');
 const fs = require('fs');
 // const fsP = require("fs/promises");
 const https = require('https');
+const tls = require('tls');
 const errorhandler = require('errorhandler');
 
 const logger = require('morgan');
@@ -188,9 +189,17 @@ exports.start_server = function (token, config) {
   app.all('/*', Root.restricted_access);
 
   if (config.https.enabled === true) {
+    // FROM https://github.com/bmancini55/node-tls/blob/master/src/server.js
+    const signedCert = fs.readFileSync("/etc/ssl/certs/rootCA.pem");
     const options = {
       key: fs.readFileSync(config.https.key_file),
-      cert: fs.readFileSync(config.https.cert_file)
+      cert: fs.readFileSync(config.https.cert_file),
+      rejectUnauthorized: true,
+      requestCert: true,
+      ca: [
+        ...tls.rootCertificates,
+        signedCert
+      ]
     };
 
     server = https

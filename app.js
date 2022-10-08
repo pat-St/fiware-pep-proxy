@@ -46,10 +46,10 @@ class WriteStream extends Writable {
     const cb = function (a = null, b = null, c = null) {
       if (a) { console.debug(a + b + c) }
     }
-    console.debug(JSON.parse(Buffer.from(chunk).toString("utf-8")))
+    debug(JSON.parse(Buffer.from(chunk).toString("utf-8")))
     try {
       let loggingProcess = Promise.resolve(true);
-      if (process.env.PEP_LOGGING_REMOTE.toLowerCase() === "true") {
+      if (process.env.PEP_LOGGING_REMOTE.toLowerCase().includes("true")) {
         loggingProcess = got.post(process.env.PEP_LOGGING_TARGET, {
           headers: {
             "Content-Type": "application/json"
@@ -58,6 +58,7 @@ class WriteStream extends Writable {
         })
       }
       loggingProcess.then(() => {
+        debug('Activity successful sent');
         // this.fd.write(chunk)
         this.fd = fs.openSync(this.filename, "a");
         fs.appendFileSync(this.fd, chunk);
@@ -116,12 +117,13 @@ exports.start_server = function (token, config) {
   }
 
   app.use(logger(function (tokens, req, res) {
+    debug('Activity pre build');
     const payload = {
       action: tokens.method(req, res),
       url: tokens.url(req, res),
       status: parseInt(tokens.status(req, res)),
       token: tokens.req(req, res, "X-Auth-Token"),
-      agent: tokens['user-agent'](req),
+      agent: tokens.req(req, res, 'host') || req.headers['Host'] || tokens.req(req, res, 'user-agent') || tokens['user-agent'](req),
       sourceAddr: tokens['remote-addr'](req),
       remoteUser: tokens.req(req, res, "X-User") || tokens['remote-user'](req),
       targetAddr: tokens.req(req, res, "fiware-service") || config.app.host + ":" + config.app.port,
